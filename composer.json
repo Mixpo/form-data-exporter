@@ -1,0 +1,24 @@
+{
+  "name": "mixpo/form-data-exporter",
+  "description": "Simple Export Db -> CSV library",
+  "version": "1.0.0",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "require": {
+    "php" : ">=5.5",
+    "ext-pdo_pgsql" : "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "4.6.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Mixpo\\Igniter\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Mixpo\\Igniter\\Test\\": "tests/"
+    }
+  }
+}

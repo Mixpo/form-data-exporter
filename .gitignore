@@ -1,0 +1,4 @@
+.idea/
+vendor/
+tests/tmp/*
+!tests/tmp/.gitkeep
