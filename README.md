@@ -2,6 +2,8 @@
 
 A somewhat specific tool meant to export to CSV, a JSON *data* column for all rows in a SQL result set.
 
+Status: [![Build Status](https://travis-ci.org/Mixpo/form-data-exporter.svg?branch=master)](https://travis-ci.org/Mixpo/form-data-exporter)
+
 ## Install
 
 ```
