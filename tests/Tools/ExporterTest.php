@@ -247,6 +247,24 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedBindings, $actualBindings);
     }
 
+    function testSelectQueryBuilderWithCriteriaListValuesSupplied()
+    {
+        $exporter = new Exporter(
+            'dsn',
+            'tableName',
+            'data',
+            TestHelper::getTmpPath('out.csv'),
+            ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]]
+        );
+        $expectedQuery = 'SELECT * FROM "tableName" WHERE "column1" IN [:_0column1, :_1column1] '
+            .'AND "column2" = :column2 '
+            .'AND "column3" IN [:_0column3, :_1column3]';
+        $expectedBindings = [':_0column1' => 'foo', ':_1column1' => 'bar', ':column2' => 'baz', ':_0column3' => 1, ':_1column3' => 2];
+        list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
+        $this->assertEquals($expectedQuery, $actualQuery);
+        $this->assertEquals($expectedBindings, $actualBindings);
+    }
+
     function testRunHappyPath()
     {
         $resultsFixture = TestHelper::getFixtureInput('happy-path.php');
