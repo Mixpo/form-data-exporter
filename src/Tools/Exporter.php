@@ -249,22 +249,44 @@ class Exporter
      */
     protected function constructSelectQuery()
     {
-        $bindings = [];
-        $whereClauseSegments = [];
         $whereClauseStatement = '';
+        $bindings = [];
         $selectStatement = "SELECT * FROM \"{$this->tableName}\"";
         if ($this->selectCriteria) {
-            array_walk(
-                $this->selectCriteria,
-                function ($v, $k) use (&$bindings, &$whereClauseSegments) {
-                    $bindings[":{$k}"] = $v;
-                    $whereClauseSegments[] = "\"$k\" = :{$k}";
-                }
-            );
+            list($whereClauseSegments, $bindings) = $this->processSelectCriteria($this->selectCriteria);
             $whereClauseStatement = ' WHERE ' . implode(' AND ', $whereClauseSegments);
         }
 
         return ["{$selectStatement}{$whereClauseStatement}", $bindings];
+    }
+
+    protected function processSelectCriteria($selectCriteria)
+    {
+        $bindings = [];
+        $whereClauseSegments = [];
+        array_walk(
+            $selectCriteria,
+            function ($v, $k) use (&$bindings, &$whereClauseSegments) {
+                if (is_array($v)) {
+                    $inBindings = [];
+                    array_walk(
+                        $v,
+                        function ($vv)use(&$inBindings, $k) {
+                            static $placeHolderIndex = 0;
+                            $inBindings[":_{$placeHolderIndex}{$k}"] = $vv;
+                            $placeHolderIndex++;
+                        }
+                    );
+                    $whereClauseSegments[] = "\"$k\" IN [".implode(', ', array_keys($inBindings))."]";
+                    $bindings += $inBindings;
+                } else {
+                    $bindings[":{$k}"] = $v;
+                    $whereClauseSegments[] = "\"$k\" = :{$k}";
+                }
+            }
+        );
+
+        return [$whereClauseSegments, $bindings];
     }
 
     protected function verifyDestinationIsWritable()
