@@ -1,6 +1,8 @@
 <?php
 namespace Mixpo\Igniter\Tools;
 
+use Psr\Log\LoggerInterface;
+
 class Exporter
 {
 
@@ -55,6 +57,10 @@ class Exporter
      *           becomes '/var/data/csv/leadgen99-55358afdeefa5.csv'
      */
     protected $randomizeOutputFilename = true;
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
 
     /**
      * @param string $dsnString
@@ -62,19 +68,22 @@ class Exporter
      * @param string $dataFieldName
      * @param string $outputPath
      * @param array $selectCriteria
+     * @param LoggerInterface $logger
      */
     function __construct(
         $dsnString,
         $tableName,
         $dataFieldName,
         $outputPath,
-        $selectCriteria = []
+        $selectCriteria = [],
+        LoggerInterface $logger
     ) {
         $this->dsnString = $dsnString;
         $this->tableName = $tableName;
         $this->dataFieldName = $dataFieldName;
         $this->outputPath = $outputPath;
         $this->selectCriteria = $selectCriteria;
+        $this->logger = $logger;
     }
 
     /**
@@ -126,10 +135,19 @@ class Exporter
      */
     protected function executeQuery($query, $bindings)
     {
-        $sth = $this->pdoConnection->prepare($query, array(\PDO::ATTR_CURSOR => \PDO::CURSOR_FWDONLY));
-        $sth->execute($bindings);
+        try {
+            $sth = $this->pdoConnection->prepare($query, array(\PDO::ATTR_CURSOR => \PDO::CURSOR_FWDONLY));
+            $sth->execute($bindings);
 
-        return $sth->fetchAll(\PDO::FETCH_ASSOC);
+            return $sth->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                "Error executing query to retrieve leadgen data. Error: " . $e->getMessage()
+                . ". Query: '{$query}'.  "
+                . "With Bindings: " . json_encode($bindings)
+            );
+            throw new \RuntimeException("There was an error selecting the Leadgen data from the data store.");
+        }
     }
 
     /**
@@ -141,7 +159,7 @@ class Exporter
     protected function exportResultToFile(array $queryResult, $targetFilePath)
     {
         if (!$queryResult) {
-            throw new InvalidInputException("Array of results to export to CSV was Empty");
+            throw new InvalidInputException("No results were returned for the given criteria.");
         }
         if (!isset($queryResult[0])) {
             throw new InvalidInputException("Input Array a list of Results since 0'th index does not exist");
@@ -271,16 +289,16 @@ class Exporter
                     $inBindings = [];
                     array_walk(
                         $v,
-                        function ($vv)use(&$inBindings, $k) {
+                        function ($vv) use (&$inBindings, $k) {
                             static $placeHolderIndex = 0;
-                            $inBindings[":_{$placeHolderIndex}{$k}"] = $vv;
+                            $inBindings["_{$placeHolderIndex}{$k}"] = $vv;
                             $placeHolderIndex++;
                         }
                     );
-                    $whereClauseSegments[] = "\"$k\" IN [".implode(', ', array_keys($inBindings))."]";
+                    $whereClauseSegments[] = "\"$k\" IN [:" . implode(', :', array_keys($inBindings)) . "]";
                     $bindings += $inBindings;
                 } else {
-                    $bindings[":{$k}"] = $v;
+                    $bindings["$k"] = $v;
                     $whereClauseSegments[] = "\"$k\" = :{$k}";
                 }
             }
@@ -292,7 +310,8 @@ class Exporter
     protected function verifyDestinationIsWritable()
     {
         if (!is_writable(pathinfo($this->outputPath, PATHINFO_DIRNAME))) {
-            throw new \RuntimeException("Target directory for output '{$this->outputPath}', not found or not writable");
+            $this->logger->error("Target directory to write the leadgen export: '{$this->outputPath}', not found or not writable");
+            throw new \RuntimeException("There was a problem in preparing the Export file");
         }
     }
 

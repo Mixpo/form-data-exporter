@@ -1,7 +1,9 @@
 <?php
 namespace Mixpo\Igniter\Test\Tools;
 
+use Mixpo\Igniter\Test\MockPDO;
 use Mixpo\Igniter\Test\TestHelper;
+use Mixpo\Igniter\Test\TestLogger;
 use Mixpo\Igniter\Tools\Exporter;
 
 class ExporterTest extends \PHPUnit_Framework_TestCase
@@ -19,7 +21,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             'outputPath',
-            []
+            [],
+            new TestLogger()
         );
         $this->assertNotNull($exporter, "Should be able to instantiate Exporter");
     }
@@ -32,7 +35,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             'outputPath',
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -55,7 +59,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $exporter->setRandomizeOutputFilename(false);
         $csvFilePath = TestHelper::invokeNonPublicMethod(
@@ -76,7 +81,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -100,7 +106,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -119,7 +126,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -138,7 +146,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -155,7 +164,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -178,7 +188,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -201,7 +212,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
@@ -222,7 +234,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            []
+            [],
+            new TestLogger()
         );
         $expectedQuery = 'SELECT * FROM "tableName"';
         $expectedBindings = [];
@@ -238,10 +251,11 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            ['column1' => 'foo', 'column2' => 'bar']
+            ['column1' => 'foo', 'column2' => 'bar'],
+            new TestLogger()
         );
         $expectedQuery = 'SELECT * FROM "tableName" WHERE "column1" = :column1 AND "column2" = :column2';
-        $expectedBindings = [':column1' => 'foo', ':column2' => 'bar'];
+        $expectedBindings = ['column1' => 'foo', 'column2' => 'bar'];
         list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
         $this->assertEquals($expectedQuery, $actualQuery);
         $this->assertEquals($expectedBindings, $actualBindings);
@@ -254,12 +268,13 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             TestHelper::getTmpPath('out.csv'),
-            ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]]
+            ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]],
+            new TestLogger()
         );
         $expectedQuery = 'SELECT * FROM "tableName" WHERE "column1" IN [:_0column1, :_1column1] '
             .'AND "column2" = :column2 '
             .'AND "column3" IN [:_0column3, :_1column3]';
-        $expectedBindings = [':_0column1' => 'foo', ':_1column1' => 'bar', ':column2' => 'baz', ':_0column3' => 1, ':_1column3' => 2];
+        $expectedBindings = ['_0column1' => 'foo', '_1column1' => 'bar', 'column2' => 'baz', '_0column3' => 1, '_1column3' => 2];
         list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
         $this->assertEquals($expectedQuery, $actualQuery);
         $this->assertEquals($expectedBindings, $actualBindings);
@@ -276,7 +291,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
                     'tableName',
                     'data',
                     TestHelper::getTmpPath('happy-path.csv'),
-                    ['column1' => 'foo', 'column2' => 'bar']
+                    ['column1' => 'foo', 'column2' => 'bar'],
+                    new TestLogger()
                 ]
             )
             ->setMethods(['executeQuery'])->getMock();
@@ -298,6 +314,25 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     /**
      * @expectedException \RuntimeException
      */
+    function testPrepareQueryIssueThrowsExpectedException()
+    {
+        $exporter = new Exporter(
+            'dsn',
+            'tableName',
+            'data',
+            TestHelper::getTmpPath('out.csv'),
+            ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]],
+            new TestLogger()
+        );
+        $mockPdo = $this->getMock('\Mixpo\Igniter\Test\MockPDO');
+        $mockPdo->expects($this->once())->method('prepare')->willThrowException(new \Exception());
+        $exporter->setPdo($mockPdo);
+        TestHelper::invokeNonPublicMethod($exporter, 'executeQuery', ['', []]);
+    }
+
+    /**
+     * @expectedException \RuntimeException
+     */
     function testUnWritableOutputDirThrowExpectedException()
     {
         $exporter = new Exporter(
@@ -305,9 +340,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'tableName',
             'data',
             '/not/a/real/path',
-            ['column1' => 'foo', 'column2' => 'bar']
+            ['column1' => 'foo', 'column2' => 'bar'],
+            new TestLogger()
         );
-        $csvFilePath = $exporter->run();
+        $exporter->run();
     }
 
 
