@@ -295,7 +295,7 @@ class Exporter
                             $placeHolderIndex++;
                         }
                     );
-                    $whereClauseSegments[] = "\"$k\" IN [:" . implode(', :', array_keys($inBindings)) . "]";
+                    $whereClauseSegments[] = "\"$k\" IN (:" . implode(', :', array_keys($inBindings)) . ")";
                     $bindings += $inBindings;
                 } else {
                     $bindings["$k"] = $v;
