@@ -1,6 +1,7 @@
 <?php
 namespace Mixpo\Igniter\Tools;
 
+use Mixpo\Igniter\Tools\DbAdapter\ConnectionAdapter;
 use Psr\Log\LoggerInterface;
 
 class Exporter
@@ -87,10 +88,10 @@ class Exporter
     }
 
     /**
-     * @param \PDO $pdo Optional injector for the PDO connection.  If not set prior to calling init(), a PDO connection
-     *                  will be built using the constructor arguments.
+     * @param ConnectionAdapter $pdo Optional injector for the PDO connection. If not set prior to calling init(),
+     * a PDO connection will be built using the constructor arguments.
      */
-    public function setPdo(\PDO $pdo)
+    public function setDbConnectionAdapter(ConnectionAdapter $pdo)
     {
         $this->pdoConnection = $pdo;
     }

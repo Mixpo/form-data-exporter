@@ -1,9 +1,9 @@
 <?php
 namespace Mixpo\Igniter\Test\Tools;
 
-use Mixpo\Igniter\Test\MockPDO;
 use Mixpo\Igniter\Test\TestHelper;
 use Mixpo\Igniter\Test\TestLogger;
+use Mixpo\Igniter\Test\Tools\DbAdapter\MockConnectionAdapter;
 use Mixpo\Igniter\Tools\Exporter;
 
 class ExporterTest extends \PHPUnit_Framework_TestCase
@@ -298,9 +298,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             ->setMethods(['executeQuery'])->getMock();
         $mockExporter->expects($this->once())->method('executeQuery')->willReturn($resultsFixture);
 
-        $mockPdo = $this->getMockBuilder('\Mixpo\Igniter\Test\MockPDO')->getMock();
-
-        $mockExporter->setPdo($mockPdo);
+        /** @var Exporter $mockExporter */
+        $mockExporter->setDbConnectionAdapter(new MockConnectionAdapter());
 
         $csvFilePath = $mockExporter->run();
 
@@ -324,9 +323,9 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]],
             new TestLogger()
         );
-        $mockPdo = $this->getMock('\Mixpo\Igniter\Test\MockPDO');
+        $mockPdo = $this->getMock('\Mixpo\Igniter\Test\Tools\DbAdapter\MockConnectionAdapter');
         $mockPdo->expects($this->once())->method('prepare')->willThrowException(new \Exception());
-        $exporter->setPdo($mockPdo);
+        $exporter->setDbConnectionAdapter($mockPdo);
         TestHelper::invokeNonPublicMethod($exporter, 'executeQuery', ['', []]);
     }
 
