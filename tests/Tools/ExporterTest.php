@@ -4,44 +4,51 @@ namespace Mixpo\Igniter\Test\Tools;
 use Mixpo\Igniter\Test\TestHelper;
 use Mixpo\Igniter\Test\TestLogger;
 use Mixpo\Igniter\Test\Tools\DbAdapter\MockConnectionAdapter;
-use Mixpo\Igniter\Tools\Exporter;
+use Mixpo\Igniter\Tools\Export\ExporterEngine;
+use Mixpo\Igniter\Tools\Export\FileSystemExporterEngine;
+use Mixpo\Igniter\Tools\FormExporter;
 
 class ExporterTest extends \PHPUnit_Framework_TestCase
 {
+    protected $logger;
+
     protected function setUp()
     {
-        array_map('unlink', glob(TestHelper::getTmpPath('/*')));
+        array_map('unlink', glob(TestHelper::getFileSystemTmpPath('/*')));
         parent::setUp();
+        $this->logger = new TestLogger();
     }
 
     function testInstantiate()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            'outputPath',
             [],
-            new TestLogger()
+            $this->logger
         );
-        $this->assertNotNull($exporter, "Should be able to instantiate Exporter");
+        $exporter->setExporterEngine(new FileSystemExporterEngine('file:///var/tmp', $this->logger));
+        $this->assertNotNull($exporter, "Should be able to instantiate FormExporter");
     }
 
     function testHappyPath()
     {
         $input = TestHelper::getFixtureInput('happy-path.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            'outputPath',
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('happy-path.csv'), $this->logger)
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, TestHelper::getTmpPath('happy-path.csv')]
+            'exportResult',
+            [$input]
         );
 
         $expected = TestHelper::getFixtureOutput('good.csv');
@@ -52,21 +59,26 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
     function testWithRandomizeFilenameOff()
     {
-        $expectedOutputFilePath = TestHelper::getTmpPath('happy-path.csv');
+        $expectedOutputFilePath = ExporterEngine::getNakedPath(TestHelper::getFileSystemTmpPath('happy-path.csv'));
         $input = TestHelper::getFixtureInput('happy-path.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
         );
-        $exporter->setRandomizeOutputFilename(false);
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(
+                TestHelper::getFileSystemTmpPath('happy-path.csv'),
+                $this->logger,
+                $randomizeFileName = false
+            )
+        );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, $expectedOutputFilePath]
+            'exportResult',
+            [$input]
         );
 
         $this->assertEquals($expectedOutputFilePath, $csvFilePath);
@@ -76,18 +88,20 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     function testFieldsOutOfOrder()
     {
         $input = TestHelper::getFixtureInput('fields-out-of-order.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, TestHelper::getTmpPath('fields-out-of-order.csv')]
+            'exportResult',
+            [$input]
         );
 
         $expected = TestHelper::getFixtureOutput('good.csv');
@@ -101,18 +115,20 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      */
     function testEmptyInputArrayThrowsException()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
         );
-        $csvFilePath = TestHelper::invokeNonPublicMethod(
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
+        );
+        TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [[], TestHelper::getTmpPath('first-row-missing-data-field.csv')]
+            'exportResult',
+            [[]]
         );
     }
 
@@ -121,18 +137,20 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      */
     function testNonListInputArrayThrowsException()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
         );
-        $csvFilePath = TestHelper::invokeNonPublicMethod(
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
+        );
+        TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [['foo' => 'bar'], TestHelper::getTmpPath('first-row-missing-data-field.csv')]
+            'exportResult',
+            [['foo' => 'bar']]
         );
     }
 
@@ -141,36 +159,40 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      */
     function testMalformedInputArrayThrowsException()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
         );
-        $csvFilePath = TestHelper::invokeNonPublicMethod(
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
+        );
+        TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [[0 => ['foo' => 'bar']], TestHelper::getTmpPath('malformed.csv')]
+            'exportResult',
+            [[0 => ['foo' => 'bar']]]
         );
     }
 
     function testFirstRowWithMissingDataField()
     {
         $input = TestHelper::getFixtureInput('first-row-missing-data-field.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, TestHelper::getTmpPath('first-row-missing-data-field.csv')]
+            'exportResult',
+            [$input]
         );
 
         $expected = TestHelper::getFixtureOutput('first-row-missing-data-field.csv');
@@ -183,18 +205,20 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     function testSecondWithMissingDataField()
     {
         $input = TestHelper::getFixtureInput('second-row-missing-data-field.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, TestHelper::getTmpPath('second-row-missing-data-field.csv')]
+            'exportResult',
+            [$input]
         );
 
         $expected = TestHelper::getFixtureOutput('second-row-missing-data-field.csv');
@@ -207,18 +231,20 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     function testOneRowWitExtraFieldField()
     {
         $input = TestHelper::getFixtureInput('one-row-with-extra-field.php');
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $csvFilePath = TestHelper::invokeNonPublicMethod(
             $exporter,
-            'exportResultToFile',
-            [$input, TestHelper::getTmpPath('one-row-with-extra-field.csv')]
+            'exportResult',
+            [$input]
         );
 
         $expected = TestHelper::getFixtureOutput('one-row-with-extra-field.csv');
@@ -229,13 +255,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
     function testSelectQueryBuilderWithEmptyCriteria()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             [],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $expectedQuery = 'SELECT * FROM "tableName"';
         $expectedBindings = [];
@@ -246,13 +274,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
     function testSelectQueryBuilderWithCriteriaSupplied()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             ['column1' => 'foo', 'column2' => 'bar'],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $expectedQuery = 'SELECT * FROM "tableName" WHERE "column1" = :column1 AND "column2" = :column2';
         $expectedBindings = ['column1' => 'foo', 'column2' => 'bar'];
@@ -263,18 +293,26 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
     function testSelectQueryBuilderWithCriteriaListValuesSupplied()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $expectedQuery = 'SELECT * FROM "tableName" WHERE "column1" IN (:_0column1, :_1column1) '
-            .'AND "column2" = :column2 '
-            .'AND "column3" IN (:_0column3, :_1column3)';
-        $expectedBindings = ['_0column1' => 'foo', '_1column1' => 'bar', 'column2' => 'baz', '_0column3' => 1, '_1column3' => 2];
+            . 'AND "column2" = :column2 '
+            . 'AND "column3" IN (:_0column3, :_1column3)';
+        $expectedBindings = [
+            '_0column1' => 'foo',
+            '_1column1' => 'bar',
+            'column2' => 'baz',
+            '_0column3' => 1,
+            '_1column3' => 2
+        ];
         list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
         $this->assertEquals($expectedQuery, $actualQuery);
         $this->assertEquals($expectedBindings, $actualBindings);
@@ -284,22 +322,24 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     {
         $resultsFixture = TestHelper::getFixtureInput('happy-path.php');
 
-        $mockExporter = $this->getMockBuilder('\Mixpo\Igniter\Tools\Exporter')
+        $mockExporter = $this->getMockBuilder('\Mixpo\Igniter\Tools\FormExporter')
             ->setConstructorArgs(
                 [
                     'dsn',
                     'tableName',
                     'data',
-                    TestHelper::getTmpPath('happy-path.csv'),
                     ['column1' => 'foo', 'column2' => 'bar'],
-                    new TestLogger()
+                    $this->logger
                 ]
             )
             ->setMethods(['executeQuery'])->getMock();
         $mockExporter->expects($this->once())->method('executeQuery')->willReturn($resultsFixture);
 
-        /** @var Exporter $mockExporter */
+        /** @var FormExporter $mockExporter */
         $mockExporter->setDbConnectionAdapter(new MockConnectionAdapter());
+        $mockExporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('happy-path.csv'), $this->logger)
+        );
 
         $csvFilePath = $mockExporter->run();
 
@@ -315,13 +355,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      */
     function testPrepareQueryIssueThrowsExpectedException()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            TestHelper::getTmpPath('out.csv'),
             ['column1' => ['foo', 'bar'], 'column2' => 'baz', 'column3' => [1, 2]],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
         $mockPdo = $this->getMock('\Mixpo\Igniter\Test\Tools\DbAdapter\MockConnectionAdapter');
         $mockPdo->expects($this->once())->method('prepare')->willThrowException(new \Exception());
@@ -334,13 +376,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      */
     function testUnWritableOutputDirThrowExpectedException()
     {
-        $exporter = new Exporter(
+        $exporter = new FormExporter(
             'dsn',
             'tableName',
             'data',
-            '/not/a/real/path',
             ['column1' => 'foo', 'column2' => 'bar'],
-            new TestLogger()
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine('/not/a/real/path', $this->logger)
         );
         $exporter->run();
     }

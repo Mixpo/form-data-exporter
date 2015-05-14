@@ -2,7 +2,8 @@
 
 namespace Mixpo\Igniter\Test;
 
-class TestHelper {
+class TestHelper
+{
 
     public static function getFixtureInput($fixtureFile)
     {
@@ -28,12 +29,13 @@ class TestHelper {
         return $method->invokeArgs($object, $parameters);
     }
 
-    public static function getTmpPath($appendedPath='')
+    public static function getFileSystemTmpPath($appendedPath = '')
     {
-        if($appendedPath && $appendedPath[0]!=='/') {
+        if ($appendedPath && $appendedPath[0] !== '/') {
             $appendedPath = "/{$appendedPath}";
         }
-        return __DIR__ . "/tmp{$appendedPath}";
+
+        return 'file://' . __DIR__ . "/tmp{$appendedPath}";
     }
 
     protected static function getTestArtifact($relativeFixturePath)
@@ -43,7 +45,7 @@ class TestHelper {
             throw new \RuntimeException("Test fixture file not found at: '{$fixturePath}''.");
         }
         $fileExt = pathinfo($fixturePath, PATHINFO_EXTENSION);
-        if($fileExt=='php') {
+        if ($fileExt == 'php') {
             return include($fixturePath);
         }
 
