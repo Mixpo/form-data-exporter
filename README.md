@@ -21,21 +21,37 @@ phpunit
 ```php
 <?php
 
-$exporter = new Exporter(
+$exporter = new FormExporter(
     'dsn', // <- PDO DSN string including credentials
     'tableName', // <- the table the you wish to export data from
     'data', // <- the name of the 'data' column (column that hold the JSON form data)
-    '/var/data/csv/leadgen99.csv',  // <- full path to the output CSV
-    ["client_id" => "12345", "campaign" => "widget-2015"] // <- criteria used to build an AND'ed WHERE clause
+    ["client_id" => "12345", "campaign" => "widget-2015"], // <- criteria used to build an AND'ed WHERE clause
+    $logger // <- Psr\Log\LoggerInterface
 );
+
+```
+
+You then set the writer engine (file system and S3 are currently supported and run the export
+
+```php
+
+$exporter->setExporterEngine(
+    new FileSystemExporterEngine(
+       'file:///var/data/csv/leadgen99.csv',  // <- full path to the output CSV in <protocol>://<path> format
+                                                    s3://<bucket>/<object-path> is also supported
+        $logger, // <- Psr\Log\LoggerInterface
+        $randomizeFileName = true
+    )
+);
+                                              
 $outputCsvFilePath = $exporter->run();
 
 ```
 
 **NOTE** In the example above the $outputCsvFilePath will have a random seed in it.  For instance with 
-`/var/data/csv/leadgen99.csv` sent into the constructor, `$outputCsvFilePath` will be something like: `/var/data/csv/leadgen99-55358afdeefa5.csv`
+`file:///var/data/csv/leadgen99.csv` sent into the `ExporterEngine` constructor, `$outputCsvFilePath` will be something like: `/var/data/csv/leadgen99-55358afdeefa5.csv`
 
-To turn off this behavior call `$exporter->setRandomizeOutputFilename(false)` prior to calling `$exporter->run()`
+To turn off this behavior call set `$randomizeFileName = false`
 
 
 ### Rows with Issues

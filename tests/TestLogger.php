@@ -1,7 +1,8 @@
 <?php
 namespace Mixpo\Igniter\Test;
 
-class TestLogger implements \Psr\Log\LoggerInterface {
+class TestLogger implements \Psr\Log\LoggerInterface
+{
 
     /**
      * System is unusable.
@@ -54,7 +55,7 @@ class TestLogger implements \Psr\Log\LoggerInterface {
      */
     public function error($message, array $context = array())
     {
-        // TODO: Implement error() method.
+        $x = 'debugpoint';
     }
 
     /**

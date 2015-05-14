@@ -2,9 +2,10 @@
 namespace Mixpo\Igniter\Tools;
 
 use Mixpo\Igniter\Tools\DbAdapter\ConnectionAdapter;
+use Mixpo\Igniter\Tools\Export\ExporterEngine;
 use Psr\Log\LoggerInterface;
 
-class Exporter
+class FormExporter
 {
 
     /**
@@ -37,11 +38,6 @@ class Exporter
     protected $dataFieldName;
 
     /**
-     * @var string
-     */
-    protected $outputPath;
-
-    /**
      * @var array
      */
     protected $selectCriteria;
@@ -64,10 +60,14 @@ class Exporter
     protected $logger;
 
     /**
+     * @var ExporterEngine
+     */
+    protected $exportEngine;
+
+    /**
      * @param string $dsnString
      * @param string $tableName
      * @param string $dataFieldName
-     * @param string $outputPath
      * @param array $selectCriteria
      * @param LoggerInterface $logger
      */
@@ -75,14 +75,12 @@ class Exporter
         $dsnString,
         $tableName,
         $dataFieldName,
-        $outputPath,
         $selectCriteria = [],
         LoggerInterface $logger
     ) {
         $this->dsnString = $dsnString;
         $this->tableName = $tableName;
         $this->dataFieldName = $dataFieldName;
-        $this->outputPath = $outputPath;
         $this->selectCriteria = $selectCriteria;
         $this->logger = $logger;
     }
@@ -102,15 +100,25 @@ class Exporter
      */
     public function run()
     {
+        if (!$this->exportEngine) {
+            throw new \RuntimeException(
+                'An Export Engine (Mixpo\Igniter\Tools\Export\ExportEngine) has not been set via ->setExportEngine()'
+            );
+        }
         if (!$this->pdoConnection) {
             $this->pdoConnection = new \PDO($this->dsnString);
         }
-        $this->verifyDestinationIsWritable();
+        $this->exportEngine->verifyDestinationIsWritable();
 
         list($query, $bindings) = $this->constructSelectQuery();
         $results = $this->executeQuery($query, $bindings);
 
-        return $this->exportResultToFile($results, $this->outputPath);
+        return $this->exportResult($results);
+    }
+
+    public function setExporterEngine(ExporterEngine $exportEngine)
+    {
+        $this->exportEngine = $exportEngine;
     }
 
     /**
@@ -119,14 +127,6 @@ class Exporter
     public function getIssues()
     {
         return $this->issues;
-    }
-
-    /**
-     * @param boolean $randomizeOutputFilename
-     */
-    public function setRandomizeOutputFilename($randomizeOutputFilename)
-    {
-        $this->randomizeOutputFilename = $randomizeOutputFilename;
     }
 
     /**
@@ -153,11 +153,10 @@ class Exporter
 
     /**
      * @param array $queryResult
-     * @param $targetFilePath
      * @return string
      * @throws InvalidInputException
      */
-    protected function exportResultToFile(array $queryResult, $targetFilePath)
+    protected function exportResult(array $queryResult)
     {
         if (!$queryResult) {
             throw new InvalidInputException("No results were returned for the given criteria.");
@@ -175,25 +174,12 @@ class Exporter
                 $transformedResult
             );
         }
-        $outputFilePath = $this->getOutputFilePath($targetFilePath);
-        $this->writeToCsv(array_keys($this->canonicalColumnNamesList), $transformedResult, $outputFilePath);
+        $outputFilePath = $this->exportEngine->writeCsv(
+            array_keys($this->canonicalColumnNamesList),
+            $transformedResult
+        );
 
         return $outputFilePath;
-    }
-
-    /**
-     * @param array $headerRow
-     * @param array $resultsArray
-     * @param string $targetFilePath
-     */
-    protected function writeToCsv(array $headerRow, array $resultsArray, $targetFilePath)
-    {
-        $fp = fopen($targetFilePath, 'w');
-        fputcsv($fp, $headerRow);
-        foreach ($resultsArray as $fields) {
-            fputcsv($fp, $fields);
-        }
-        fclose($fp);
     }
 
     /**
@@ -308,26 +294,4 @@ class Exporter
         return [$whereClauseSegments, $bindings];
     }
 
-    protected function verifyDestinationIsWritable()
-    {
-        if (!is_writable(pathinfo($this->outputPath, PATHINFO_DIRNAME))) {
-            $this->logger->error("Target directory to write the leadgen export: '{$this->outputPath}', not found or not writable");
-            throw new \RuntimeException("There was a problem in preparing the Export file");
-        }
-    }
-
-    /**
-     * @param string $targetFilePath
-     * @return string
-     */
-    protected function getOutputFilePath($targetFilePath)
-    {
-        if ($this->randomizeOutputFilename) {
-            $pathParts = pathinfo($targetFilePath);
-            $random = uniqid();
-            $targetFilePath = "{$pathParts['dirname']}/{$pathParts['filename']}-{$random}.{$pathParts['extension']}";
-        }
-
-        return $targetFilePath;
-    }
 }
