@@ -318,6 +318,34 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedBindings, $actualBindings);
     }
 
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testConstructSelectQueryWithDateCriteriaSupplied()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['startDate' => '2015-04-01', 'endDate' => '2015-04-30'],
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
+        );
+        $expectedQuery = 'SELECT * FROM "tableName" WHERE "created" >= :startDate '
+            . 'AND "created" <= :endDate';
+
+        $expectedBindings = [
+            'startDate' => '2015-04-01',
+            'endDate' => '2015-04-30'
+        ];
+        list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
+        $this->assertEquals($expectedQuery, $actualQuery);
+        $this->assertEquals($expectedBindings, $actualBindings);
+    }
+
     function testRunHappyPath()
     {
         $resultsFixture = TestHelper::getFixtureInput('happy-path.php');
@@ -389,5 +417,336 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $exporter->run();
     }
 
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaNoData()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
 
+        $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [[]]);
+        $this->assertTrue($validated, "No parameters to validate did not return true");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaWithNoDateData()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['col1' => 'x', 'col2' => 'y']]);
+        $this->assertTrue($validated, "Validating no date parameters did not return true");
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaInvalidStartDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => 'nuhuh', 'endDate' => '2015-01-01']]);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaInvalidEndDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => '2015-01-01', 'endDate' => 'nope']]);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaRealDates()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $isValidated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => '2015-01-01', 'endDate' => '2015-02-01']]);
+        $this->assertTrue($isValidated, "Validator didn't validate valid dates.");
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateAfterEndDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => '2015-02-01', 'endDate' => '2015-01-01']]);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateEqualsEndDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => '2015-02-01', 'endDate' => '2015-02-01']]);
+        $this->assertTrue($validated, "Start date == end date failed to validate");
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateInFutureThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        // Pick a date 7 days from now.
+        $futureStartDate = (new \DateTime())->modify('7 days');
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => $futureStartDate->format(\DateTime::ISO8601), 'endDate' => '2015-02-01']]);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateValidity()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = '2015-01-01';
+        $endDate = '2015-02-01';
+        $expectedStartDate = new \DateTime($startDate);
+        // This one is fully tested elsewhere.
+        $expectedEndDate = TestHelper::invokeNonPublicMethod($exporter, 'getEndDate', [$endDate]);
+
+        list ($actualStartDate, $actualEndDate) = TestHelper::invokeNonPublicMethod($exporter, 'checkDateValidity',
+            [$startDate, $endDate]);
+        $this->assertEquals($expectedStartDate, $actualStartDate, "Start date did not match expected.");
+        $this->assertEquals($expectedEndDate, $actualEndDate, "End date did not match expected.");
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateValidityThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = '2015-01-01';
+        $endDate = 'weebolahtimmaugh';
+        TestHelper::invokeNonPublicMethod($exporter, 'checkDateValidity', [$startDate, $endDate]);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateBoundsStartDateInFutureThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $futureStartDate = (new \DateTime())->modify('7 days');
+        $endDate = '2015-02-01';
+
+        TestHelper::invokeNonPublicMethod($exporter, 'checkDateBounds', [$futureStartDate, $endDate]);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateBoundsStartDateAfterEndDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = new \DateTime('2015-04-01');
+        $endDate = new \DateTime('2015-02-01');
+
+        TestHelper::invokeNonPublicMethod($exporter, 'checkDateBounds', [$startDate, $endDate]);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateBoundsWorksWithValidDates()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = new \DateTime('2015-01-01');
+        $endDate = new \DateTime('2015-02-01');
+
+        $dateBounds = TestHelper::invokeNonPublicMethod($exporter, 'checkDateBounds', [$startDate, $endDate]);
+        $this->assertTrue($dateBounds, "checkDateBounds didn't return true with valid dates.");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testGetStartDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDateStr = '2015-01-01';
+        $expectedStartDateDateTime = new \DateTime($startDateStr . ' 00:00:00');
+
+        $this->assertEquals($expectedStartDateDateTime,
+            TestHelper::invokeNonPublicMethod($exporter, 'getStartDate', [$startDateStr]));
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testGetEndDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $endDateStr = '2015-01-01';
+        $expectedEendDateDateTime = new \DateTime($endDateStr . ' 23:59:59');
+
+        $this->assertEquals($expectedEendDateDateTime,
+            TestHelper::invokeNonPublicMethod($exporter, 'getEndDate', [$endDateStr]));
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testProcessSelectCriteriaStartEndDates()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = '2015-01-01';
+        $endDate = '2015-01-02';
+        $selectCriteria = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria',
+            [['startDate' => $startDate, 'endDate' => $endDate]]);
+
+        $whereItems = $selectCriteria[0];
+        $keyValuePairs = $selectCriteria[1];
+
+        $this->assertEquals('"created" >= :startDate', $whereItems[0]);
+        $this->assertEquals('"created" <= :endDate', $whereItems[1]);
+        $this->assertEquals($startDate, $keyValuePairs['startDate']);
+        $this->assertEquals($endDate, $keyValuePairs['endDate']);
+    }
 }

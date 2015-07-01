@@ -3,6 +3,8 @@ namespace Mixpo\Igniter\Tools;
 
 use Mixpo\Igniter\Tools\DbAdapter\ConnectionAdapter;
 use Mixpo\Igniter\Tools\Export\ExporterEngine;
+use Mixpo\Igniter\Common\ArrayUtil;
+use Mixpo\Igniter\Common\DateTimeUtil;
 use Psr\Log\LoggerInterface;
 
 class FormExporter
@@ -63,6 +65,9 @@ class FormExporter
      * @var ExporterEngine
      */
     protected $exportEngine;
+
+    const START_DATE_ATTRIBUTE = 'startDate';
+    const END_DATE_ATTRIBUTE = 'endDate';
 
     /**
      * @param string $dsnString
@@ -265,6 +270,12 @@ class FormExporter
         return ["{$selectStatement}{$whereClauseStatement}", $bindings];
     }
 
+    /**
+     * Extracs select critera from the $selectCriteria array, and turns them into SQL bound options.
+     *
+     * @param $selectCriteria
+     * @return array
+     */
     protected function processSelectCriteria($selectCriteria)
     {
         $bindings = [];
@@ -285,8 +296,14 @@ class FormExporter
                     $whereClauseSegments[] = "\"$k\" IN (:" . implode(', :', array_keys($inBindings)) . ")";
                     $bindings += $inBindings;
                 } else {
-                    $bindings["$k"] = $v;
-                    $whereClauseSegments[] = "\"$k\" = :{$k}";
+                    $bindings[$k] = $v;
+                    if ($k == self::START_DATE_ATTRIBUTE) {
+                        $whereClauseSegments[] = "\"created\" >= :{$k}";
+                    } elseif ($k == self::END_DATE_ATTRIBUTE) {
+                        $whereClauseSegments[] = "\"created\" <= :{$k}";
+                    } else {
+                        $whereClauseSegments[] = "\"$k\" = :{$k}";
+                    }
                 }
             }
         );
@@ -294,4 +311,107 @@ class FormExporter
         return [$whereClauseSegments, $bindings];
     }
 
+    /**
+     * Provide validation for select criteria coming from the client; currently only supports startDate and endDate.
+     * startDate & endDate are expected to be epoch (? or perhaps ISO-8601)
+     *
+     * @todo: Break it down, funky
+     * @param array $selectCriteria
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
+    protected function validateSelectCriteria($selectCriteria)
+    {
+        // If we didn't get any criteria, or we didn't get any date criteria, we'll consider it validated for now
+        if ((is_array($selectCriteria) && count($selectCriteria) == 0)
+            || (!isset($selectCriteria[self::START_DATE_ATTRIBUTE]) && !isset($selectCriteria[self::END_DATE_ATTRIBUTE]))
+        ) {
+            return true;
+        }
+
+        // We _could_ treat a solo startDate as a single-day option here.
+        if (!ArrayUtil::checkBothExist($selectCriteria, self::START_DATE_ATTRIBUTE, self::END_DATE_ATTRIBUTE)) {
+            throw new \InvalidArgumentException("Both startDate and endDate need to be supplied.");
+        }
+
+        // Will throw an \InvalidParameterException if anything goes wrong.
+        list($startDate, $endDate) = $this->checkDateValidity($selectCriteria[self::START_DATE_ATTRIBUTE],
+            $selectCriteria[self::END_DATE_ATTRIBUTE]);
+
+        $this->checkDateBounds($startDate, $endDate);
+
+        return true;
+    }
+
+    /**
+     * @param string $startDate
+     * @return \DateTime
+     */
+    protected function getStartDate($startDate)
+    {
+        return new \DateTime($startDate);
+    }
+
+    /**
+     * Returns the end date ensuring end-of-day time.
+     *
+     * @param string $endDate
+     * @return \DateTime
+     */
+    protected function getEndDate($endDate)
+    {
+        $endDateTime = new \DateTime($endDate);
+        // Make $endDate 23:59:59 of specified date for inclusive exports
+        $endDateTime->modify('tomorrow')->modify('1 second ago');
+
+        return $endDateTime;
+    }
+
+    /**
+     * Ensure startDate and endDate parse.
+     *
+     * @param $startDateParam
+     * @param $endDateParam
+     * @return \DateTime[]
+     */
+    protected function checkDateValidity($startDateParam, $endDateParam)
+    {
+        try {
+            $startDate = $this->getStartDate($startDateParam);
+            $endDate = $this->getEndDate($endDateParam);
+            if (!DateTimeUtil::dateTimeIsValid($startDate) || !DateTimeUtil::dateTimeIsValid($endDate)) {
+                throw new \Exception();
+            }
+        } catch (\Exception $e) {
+            throw new \InvalidArgumentException("A date failed to parse: startDate = '{$startDateParam}', endDate = '{$startDateParam}'");
+        }
+        return [$startDate, $endDate];
+    }
+
+    /**
+     * Ensure our scenario is startDate < endDate and startDate is not in the future.
+     *
+     * @param \DateTime $startDate
+     * @param \DateTime $endDate
+     * @return bool
+     */
+    protected function checkDateBounds($startDate, $endDate)
+    {
+
+        // Check if the start date is in the future.
+        $todayDiff = $startDate->diff(new \DateTime());
+        if ($todayDiff->days > 0 && $todayDiff->invert == 1) {
+            $today = (new \DateTime())->format(\DateTime::ISO8601);
+            throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({$today})");
+        }
+
+        // Create a diff of start and end dates for ensuring startDate comes before or is equal to endDate
+        $diff = $startDate->diff($endDate);
+
+        if ($diff->days > 0 && $diff->invert == 1) {                    // startDate > endDate, no resolution
+            throw new \InvalidArgumentException("Date order problem: startDate({$startDate->format(\DateTime::ISO8601)}) > endDate({$startDate->format(\DateTime::ISO8601)})");
+        }
+
+        return true;
+    }
 }
