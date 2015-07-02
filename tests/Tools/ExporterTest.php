@@ -389,5 +389,42 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $exporter->run();
     }
 
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testProcessSelectCriteria()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['column1' => 'foo', 'column2' => 'bar'],
+            $this->logger
+        );
+
+//        $exporter->processSelectCriteria('x');
+        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['x' => 'y']]);
+        $this->assertTrue(false);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testvalidateSelectCriteria()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['column1' => 'foo', 'column2' => 'bar'],
+            $this->logger
+        );
+
+//        $exporter->processSelectCriteria('x');
+        $thing = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['x' => 'y']]);
+        $this->assertTrue(false);
+    }
 
 }
