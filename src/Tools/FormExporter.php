@@ -316,6 +316,7 @@ class FormExporter
         // three: check that start date <= end date (if they are equal, we'll go 00:00:00 - 23:59:59)
         // If any of these fail, throw an InvalidArgumentException("usable data");
 
+        // If we didn't get any criteria, we'll consider it validated for now.
         if (is_array($selectCriteria) && count($selectCriteria) == 0) {
             return true;
         }
@@ -331,12 +332,12 @@ class FormExporter
 
         if (isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
             try {
-                $startDate = new \DateTime($selectCriteria['start_date']);
+                $startDate = $this->getStartDate($selectCriteria['start_date']);
             } catch (\Exception $e) {
                 throw new \InvalidArgumentException("start_date failed to parse with data '{$selectCriteria['start_date']}', original message: {$e->getMessage()}");
             }
             try {
-                $endDate = new \DateTime($selectCriteria['end_date']);
+                $endDate = $this->getEndDate($selectCriteria['end_date']);
             } catch (\Exception $e) {
                 throw new \InvalidArgumentException("end_date failed to parse with data '{$selectCriteria['end_date']}', original message: {$e->getMessage()}");
             }
@@ -350,13 +351,8 @@ class FormExporter
         // Create a diff of start and end dates for comparison
         $diff = $startDate->diff($endDate);
 
-        // Make $endDate 23:59:59 of specified date for inclusive exports
-        $endDate->add(new \DateInterval('PT' . 86399 . 'S'));
-
-
         // Check if the start date is in the future.
         $todayDiff = $startDate->diff(new \DateTime());
-
         if ($todayDiff->days > 0 && $todayDiff->invert == 1) {
             throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({(new \DateTime())->format(\DateTime::ISO8601)})");
         }
@@ -373,4 +369,27 @@ class FormExporter
             }
         }
     }
+
+    /**
+     * @param string $startDate
+     * @return \DateTime
+     */
+    protected function getStartDate($startDate)
+    {
+        return new \DateTime($startDate);
+    }
+
+    /**
+     * @param string $endDate
+     * @return \DateTime
+     */
+    protected function getEndDate($endDate)
+    {
+        $endDateTime = new \DateTime($endDate);
+        // Make $endDate 23:59:59 of specified date for inclusive exports
+        $endDateTime->add(new \DateInterval('PT' . 86399 . 'S'));
+        return $endDateTime;
+    }
+
+
 }

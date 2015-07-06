@@ -622,4 +622,44 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         $this->assertFalse(true, "Exception not thrown");
     }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testGetStartDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDateStr = '2015-01-01';
+        $expectedStartDateDateTime = new \DateTime($startDateStr . ' 00:00:00');
+
+        $this->assertEquals($expectedStartDateDateTime, TestHelper::invokeNonPublicMethod($exporter, 'getStartDate', [$startDateStr]));
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testGetEndDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $endDateStr = '2015-01-01';
+        $expectedEendDateDateTime = new \DateTime($endDateStr . ' 23:59:59');
+
+        $this->assertEquals($expectedEendDateDateTime, TestHelper::invokeNonPublicMethod($exporter, 'getEndDate', [$endDateStr]));
+    }
 }
