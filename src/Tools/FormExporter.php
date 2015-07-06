@@ -1,7 +1,6 @@
 <?php
 namespace Mixpo\Igniter\Tools;
 
-use Doctrine\Instantiator\Exception\InvalidArgumentException;
 use Mixpo\Igniter\Tools\DbAdapter\ConnectionAdapter;
 use Mixpo\Igniter\Tools\Export\ExporterEngine;
 use Psr\Log\LoggerInterface;
