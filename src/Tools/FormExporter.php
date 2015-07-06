@@ -302,7 +302,9 @@ class FormExporter
     }
 
     /**
-     * Provide
+     * Provide validation for select criteria coming from the client; currently only supports start_date and end_date.
+     * start_date & end_date are expected to be epoch (? or perhaps ISO-8601)
+     *
      * @param $selectCriteria
      */
     protected function validateSelectCriteria($selectCriteria)
@@ -326,6 +328,7 @@ class FormExporter
             }
         }
 
+        // We _could_ treat a solo start_date as a single-day option here.
         if (isset($selectCriteria['start_date']) && !isset($selectCriteria['end_date'])) {
             throw new \InvalidArgumentException("start_date exists without an end_date.");
         }
