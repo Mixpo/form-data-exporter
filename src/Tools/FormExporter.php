@@ -1,6 +1,7 @@
 <?php
 namespace Mixpo\Igniter\Tools;
 
+use Doctrine\Instantiator\Exception\InvalidArgumentException;
 use Mixpo\Igniter\Tools\DbAdapter\ConnectionAdapter;
 use Mixpo\Igniter\Tools\Export\ExporterEngine;
 use Psr\Log\LoggerInterface;
@@ -302,14 +303,36 @@ class FormExporter
 
     /**
      * Provide
-     * @param $selectCritera
+     * @param $selectCriteria
      */
-    protected function validateSelectCriteria($selectCritera) {
+    protected function validateSelectCriteria($selectCriteria)
+    {
         // The idea here is to validate the in-bound dates, on a three-point system
         // one: check start date for date validity
         // two: check end date for date validity
         // three: check that start date <= end date (if they are equal, we'll go 00:00:00 - 23:59:59)
         // If any of these fail, throw an InvalidArgumentException("usable data");
+
+        if (isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
+            try {
+                new \DateTime($selectCriteria['start_date']);
+            } catch (\Exception $e) {
+                throw new \InvalidArgumentException("start_date failed to parse with data '{$selectCriteria['start_date']}', original message: {$e->getMessage()}");
+            }
+            try {
+                new \DateTime($selectCriteria['end_date']);
+            } catch (\Exception $e) {
+                throw new \InvalidArgumentException("end_date failed to parse with data '{$selectCriteria['end_date']}', original message: {$e->getMessage()}");
+            }
+        }
+
+        if (isset($selectCriteria['start_date']) && !isset($selectCriteria['end_date'])) {
+            throw new \InvalidArgumentException("start_date exists without an end_date.");
+        }
+
+        if (!isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
+            throw new \InvalidArgumentException("end_date exists without a start_date.");
+        }
 
     }
 }
