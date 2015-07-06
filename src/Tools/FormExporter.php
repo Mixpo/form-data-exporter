@@ -265,6 +265,12 @@ class FormExporter
         return ["{$selectStatement}{$whereClauseStatement}", $bindings];
     }
 
+    /**
+     * Extracs select critera from the $selectCriteria array, and turns them into SQL bound options.
+     *
+     * @param $selectCriteria
+     * @return array
+     */
     protected function processSelectCriteria($selectCriteria)
     {
         $bindings = [];
@@ -294,4 +300,16 @@ class FormExporter
         return [$whereClauseSegments, $bindings];
     }
 
+    /**
+     * Provide
+     * @param $selectCritera
+     */
+    protected function validateSelectCriteria($selectCritera) {
+        // The idea here is to validate the in-bound dates, on a three-point system
+        // one: check start date for date validity
+        // two: check end date for date validity
+        // three: check that start date <= end date (if they are equal, we'll go 00:00:00 - 23:59:59)
+        // If any of these fail, throw an InvalidArgumentException("usable data");
+
+    }
 }
