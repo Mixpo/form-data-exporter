@@ -304,7 +304,9 @@ class FormExporter
      * Provide validation for select criteria coming from the client; currently only supports start_date and end_date.
      * start_date & end_date are expected to be epoch (? or perhaps ISO-8601)
      *
-     * @param $selectCriteria
+     * @param array $selectCriteria
+     * @return bool
+     * @throws \InvalidArgumentException
      */
     protected function validateSelectCriteria($selectCriteria)
     {
@@ -314,17 +316,8 @@ class FormExporter
         // three: check that start date <= end date (if they are equal, we'll go 00:00:00 - 23:59:59)
         // If any of these fail, throw an InvalidArgumentException("usable data");
 
-        if (isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
-            try {
-                new \DateTime($selectCriteria['start_date']);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException("start_date failed to parse with data '{$selectCriteria['start_date']}', original message: {$e->getMessage()}");
-            }
-            try {
-                new \DateTime($selectCriteria['end_date']);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException("end_date failed to parse with data '{$selectCriteria['end_date']}', original message: {$e->getMessage()}");
-            }
+        if (is_array($selectCriteria) && count($selectCriteria) == 0) {
+            return true;
         }
 
         // We _could_ treat a solo start_date as a single-day option here.
@@ -336,5 +329,48 @@ class FormExporter
             throw new \InvalidArgumentException("end_date exists without a start_date.");
         }
 
+        if (isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
+            try {
+                $startDate = new \DateTime($selectCriteria['start_date']);
+            } catch (\Exception $e) {
+                throw new \InvalidArgumentException("start_date failed to parse with data '{$selectCriteria['start_date']}', original message: {$e->getMessage()}");
+            }
+            try {
+                $endDate = new \DateTime($selectCriteria['end_date']);
+            } catch (\Exception $e) {
+                throw new \InvalidArgumentException("end_date failed to parse with data '{$selectCriteria['end_date']}', original message: {$e->getMessage()}");
+            }
+        }
+
+        // Now for the actual data validation.
+        // Ignore this for now
+//        $x = \Igniter\Common\DateTimeUtil::dateTimeIsValid($startDate);
+//        $x;
+
+        // Create a diff of start and end dates for comparison
+        $diff = $startDate->diff($endDate);
+
+        // Make $endDate 23:59:59 of specified date for inclusive exports
+        $endDate->add(new \DateInterval('PT' . 86399 . 'S'));
+
+
+        // Check if the start date is in the future.
+        $todayDiff = $startDate->diff(new \DateTime());
+
+        if ($todayDiff->days > 0 && $todayDiff->invert == 1) {
+            throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({(new \DateTime())->format(\DateTime::ISO8601)})");
+        }
+
+        if ($diff->days > 0 and $diff->invert == 0) {                       // startDate < endDate, our typical scenario
+            return true;
+        } else {
+            if ($diff->days > 0 && $diff->invert == 1) {                    // startDate > endDate, no resolution
+                throw new \InvalidArgumentException("Date order problem: start_date({$selectCriteria['start_date']}) > end_date({$selectCriteria['start_date']})");
+            } else {
+                if ($diff->days == 0) {                                     // startDate = endDate, one day scenario
+                    return true;
+                }
+            }
+        }
     }
 }

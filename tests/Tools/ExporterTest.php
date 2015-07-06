@@ -7,7 +7,6 @@ use Mixpo\Igniter\Test\Tools\DbAdapter\MockConnectionAdapter;
 use Mixpo\Igniter\Tools\Export\ExporterEngine;
 use Mixpo\Igniter\Tools\Export\FileSystemExporterEngine;
 use Mixpo\Igniter\Tools\FormExporter;
-use Psr\Log\InvalidArgumentException;
 
 class ExporterTest extends \PHPUnit_Framework_TestCase
 {
@@ -391,6 +390,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @todo: something
      * @group FL-1161
      * @group FL-1236
      */
@@ -404,7 +404,25 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->logger
         );
 
-        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['x' => 'y']]);
+        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [[]]);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaNoData()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [[]]);
+        $this->assertTrue($validated, "No parameters to validate did not return true");
     }
 
     /**
@@ -427,7 +445,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['start_date' => $dateData]]);
         } catch (\InvalidArgumentException $e) {
             $this->assertContains('start_date exists without an end_date.', $e->getMessage());
+            return;
         }
+        $this->assertFalse(true, "Exception not thrown");
+
     }
 
     /**
@@ -451,7 +472,9 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
             $this->assertContains('end_date exists without a start_date.', $e->getMessage());
+            return;
         }
+        $this->assertFalse(true, "Exception not thrown");
     }
 
     /**
@@ -471,12 +494,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $invalidStartDateData = 'nuhuh';
 
         try {
-            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['start_date' => $invalidStartDateData, 'end_date' => '2015-01-01']]);
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+                [['start_date' => $invalidStartDateData, 'end_date' => '2015-01-01']]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
             $this->assertContains('start_date', $e->getMessage());
             $this->assertContains($invalidStartDateData, $e->getMessage());
+            return;
         }
+        $this->assertFalse(true, "Exception not thrown");
     }
 
     /**
@@ -496,11 +522,104 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $invalidEndDateData = 'nope';
 
         try {
-            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['start_date' => '2015-01-01', 'end_date' => $invalidEndDateData]]);
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+                [['start_date' => '2015-01-01', 'end_date' => $invalidEndDateData]]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
             $this->assertContains('end_date', $e->getMessage());
             $this->assertContains($invalidEndDateData, $e->getMessage());
+            return;
         }
+        $this->assertFalse(true, "Exception not thrown");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaRealDates()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $isValidated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['start_date' => '2015-01-01', 'end_date' => '2015-02-01']]);
+        $this->assertTrue($isValidated, "Validator didn't validate valid dates.");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateAfterEndDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        try {
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+                [['start_date' => '2015-02-01', 'end_date' => '2015-01-01']]);
+        } catch (\InvalidArgumentException $e) {
+            $this->assertContains("Date order problem", $e->getMessage());
+            return;
+        }
+        $this->assertFalse(true, "Exception not thrown");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateEqualsEndDate()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['start_date' => '2015-02-01', 'end_date' => '2015-02-01']]);
+        $this->assertTrue($validated, "Start date == end date failed to validate");
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testValidateSelectCriteriaStartDateInTheFuture()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        // Pick a date 7 days from now.
+        $futureStartDate = (new \DateTime())->add(new \DateInterval('P7D'));
+
+        try {
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+                [['start_date' => $futureStartDate->format(\DateTime::ISO8601), 'end_date' => '2015-02-01']]);
+        } catch (\InvalidArgumentException $e) {
+            $this->assertContains("Start date in the future", $e->getMessage());
+            return;
+        }
+
+        $this->assertFalse(true, "Exception not thrown");
     }
 }
