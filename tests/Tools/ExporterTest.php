@@ -662,4 +662,91 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals($expectedEendDateDateTime, TestHelper::invokeNonPublicMethod($exporter, 'getEndDate', [$endDateStr]));
     }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testProcessSelectCriteriaStartEndDates()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = '2015-01-01';
+        $endDate = '2015-01-02';
+        $selectCriteria = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['start_date' => $startDate, 'end_date' => $endDate]]);
+
+        $whereItems = $selectCriteria[0];
+        $keyValuePairs = $selectCriteria[1];
+
+        $this->assertEquals('created >= :start_date', $whereItems[0]);
+        $this->assertEquals('"start_date" = :start_date', $whereItems[1]);
+        $this->assertEquals('created <= :end_date', $whereItems[2]);
+        $this->assertEquals('"end_date" = :end_date', $whereItems[3]);
+        $this->assertEquals($startDate, $keyValuePairs['start_date']);
+        $this->assertEquals($endDate, $keyValuePairs['end_date']);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testExportsTimeboxRanger()
+    {
+        $input = TestHelper::getFixtureInput('date-spread.php');
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['start_date' => '2015-04-01', 'end_date' => '2015-04-30'],
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('date-spread.csv'), $this->logger)
+        );
+        $csvFilePath = TestHelper::invokeNonPublicMethod(
+            $exporter,
+            'exportResult',
+            [$input]
+        );
+
+        $expected = TestHelper::getFixtureOutput('good-date-spread.csv');
+        $actual = TestHelper::getTmpFile(pathinfo($csvFilePath, PATHINFO_BASENAME));
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testExportsTimeboxRangeSingleDay()
+    {
+        $input = TestHelper::getFixtureInput('date-spread.php');
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['start_date' => '2015-04-01', 'end_date' => '2015-04-01'],
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('date-spread-one-day.csv'), $this->logger)
+        );
+        $csvFilePath = TestHelper::invokeNonPublicMethod(
+            $exporter,
+            'exportResult',
+            [$input]
+        );
+
+        $expected = TestHelper::getFixtureOutput('good-date-spread-one-day.csv');
+        $actual = TestHelper::getTmpFile(pathinfo($csvFilePath, PATHINFO_BASENAME));
+
+        $this->assertEquals($expected, $actual);
+    }
 }
