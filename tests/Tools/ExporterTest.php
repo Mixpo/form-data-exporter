@@ -404,7 +404,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->logger
         );
 
-        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [[]]);
+        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['start_date' => '2015-01-01', 'end_date' => '2015-02-01']]);
     }
 
     /**

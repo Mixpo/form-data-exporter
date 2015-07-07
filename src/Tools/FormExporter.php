@@ -291,6 +291,8 @@ class FormExporter
                     $whereClauseSegments[] = "\"$k\" IN (:" . implode(', :', array_keys($inBindings)) . ")";
                     $bindings += $inBindings;
                 } else {
+
+                    //Potential hack here, adding date checks would make this un-reusable but have stronger typing.
                     $bindings["$k"] = $v;
                     $whereClauseSegments[] = "\"$k\" = :{$k}";
                 }
