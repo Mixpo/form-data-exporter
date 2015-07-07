@@ -304,6 +304,7 @@ class FormExporter
      * Provide validation for select criteria coming from the client; currently only supports start_date and end_date.
      * start_date & end_date are expected to be epoch (? or perhaps ISO-8601)
      *
+     * @todo: Break it down, funky
      * @param array $selectCriteria
      * @return bool
      * @throws \InvalidArgumentException
@@ -348,14 +349,15 @@ class FormExporter
 //        $x = \Igniter\Common\DateTimeUtil::dateTimeIsValid($startDate);
 //        $x;
 
-        // Create a diff of start and end dates for comparison
-        $diff = $startDate->diff($endDate);
-
         // Check if the start date is in the future.
         $todayDiff = $startDate->diff(new \DateTime());
         if ($todayDiff->days > 0 && $todayDiff->invert == 1) {
-            throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({(new \DateTime())->format(\DateTime::ISO8601)})");
+            $today = (new \DateTime())->format(\DateTime::ISO8601);
+            throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({$today})");
         }
+
+        // Create a diff of start and end dates for comparison
+        $diff = $startDate->diff($endDate);
 
         if ($diff->days > 0 and $diff->invert == 0) {                       // startDate < endDate, our typical scenario
             return true;
@@ -368,6 +370,7 @@ class FormExporter
                 }
             }
         }
+        return true;
     }
 
     /**
@@ -380,6 +383,8 @@ class FormExporter
     }
 
     /**
+     * Returns the end date ensuring end-of-day time.
+     *
      * @param string $endDate
      * @return \DateTime
      */
@@ -390,6 +395,4 @@ class FormExporter
         $endDateTime->add(new \DateInterval('PT' . 86399 . 'S'));
         return $endDateTime;
     }
-
-
 }
