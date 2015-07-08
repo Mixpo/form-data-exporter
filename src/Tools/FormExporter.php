@@ -294,14 +294,14 @@ class FormExporter
                     //Potential hack here, adding date checks would make this un-reusable but have stronger typing.
                     if ($k == 'start_date') {
                         $bindings["$k"] = $v;
-                        $whereClauseSegments[] = "created >= :{$k}";
-                    }
-                    if ($k == 'end_date') {
+                        $whereClauseSegments[] = "\"created\" >= :{$k}";
+                    } elseif ($k == 'end_date') {
                         $bindings["$k"] = $v;
-                        $whereClauseSegments[] = "created <= :{$k}";
+                        $whereClauseSegments[] = "\"created\" <= :{$k}";
+                    } else {
+                        $bindings["$k"] = $v;
+                        $whereClauseSegments[] = "\"$k\" = :{$k}";
                     }
-                    $bindings["$k"] = $v;
-                    $whereClauseSegments[] = "\"$k\" = :{$k}";
                 }
             }
         );

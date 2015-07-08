@@ -318,6 +318,30 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedBindings, $actualBindings);
     }
 
+    function testSelectQueryBuilderWithDateCriteriaSupplied()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            ['start_date' => '2015-04-01', 'end_date' => '2015-04-30'],
+            $this->logger
+        );
+        $exporter->setExporterEngine(
+            new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
+        );
+        $expectedQuery = 'SELECT * FROM "tableName" WHERE "created" >= :start_date '
+            . 'AND "created" <= :end_date';
+
+        $expectedBindings = [
+            'start_date' => '2015-04-01',
+            'end_date' => '2015-04-30'
+        ];
+        list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
+        $this->assertEquals($expectedQuery, $actualQuery);
+        $this->assertEquals($expectedBindings, $actualBindings);
+    }
+
     function testRunHappyPath()
     {
         $resultsFixture = TestHelper::getFixtureInput('happy-path.php');
@@ -684,10 +708,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $whereItems = $selectCriteria[0];
         $keyValuePairs = $selectCriteria[1];
 
-        $this->assertEquals('created >= :start_date', $whereItems[0]);
-        $this->assertEquals('"start_date" = :start_date', $whereItems[1]);
-        $this->assertEquals('created <= :end_date', $whereItems[2]);
-        $this->assertEquals('"end_date" = :end_date', $whereItems[3]);
+        $this->assertEquals('"created" >= :start_date', $whereItems[0]);
+        $this->assertEquals('"created" <= :end_date', $whereItems[1]);
         $this->assertEquals($startDate, $keyValuePairs['start_date']);
         $this->assertEquals($endDate, $keyValuePairs['end_date']);
     }
