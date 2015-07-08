@@ -65,6 +65,16 @@ class FormExporter
     protected $exportEngine;
 
     /**
+     * @var string
+     */
+    protected $startDateParam = 'startDate';
+
+    /**
+     * @var string
+     */
+    protected $endDateParam   = 'endDate';
+
+    /**
      * @param string $dsnString
      * @param string $tableName
      * @param string $dataFieldName
@@ -293,9 +303,9 @@ class FormExporter
                 } else {
                     $bindings[$k] = $v;
                     //Potential hack here, adding date checks would make this un-reusable but have stronger typing.
-                    if ($k == 'start_date') {
+                    if ($k == $this->startDateParam) {
                         $whereClauseSegments[] = "\"created\" >= :{$k}";
-                    } elseif ($k == 'end_date') {
+                    } elseif ($k == $this->endDateParam) {
                         $whereClauseSegments[] = "\"created\" <= :{$k}";
                     } else {
                         $whereClauseSegments[] = "\"$k\" = :{$k}";
@@ -308,8 +318,8 @@ class FormExporter
     }
 
     /**
-     * Provide validation for select criteria coming from the client; currently only supports start_date and end_date.
-     * start_date & end_date are expected to be epoch (? or perhaps ISO-8601)
+     * Provide validation for select criteria coming from the client; currently only supports startDate and endDate.
+     * startDate & endDate are expected to be epoch (? or perhaps ISO-8601)
      *
      * @todo: Break it down, funky
      * @param array $selectCriteria
@@ -329,25 +339,25 @@ class FormExporter
             return true;
         }
 
-        // We _could_ treat a solo start_date as a single-day option here.
-        if (isset($selectCriteria['start_date']) && !isset($selectCriteria['end_date'])) {
-            throw new \InvalidArgumentException("start_date exists without an end_date.");
+        // We _could_ treat a solo startDate as a single-day option here.
+        if (isset($selectCriteria[$this->startDateParam]) && !isset($selectCriteria[$this->endDateParam])) {
+            throw new \InvalidArgumentException("startDate exists without an endDate.");
         }
 
-        if (!isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
-            throw new \InvalidArgumentException("end_date exists without a start_date.");
+        if (!isset($selectCriteria[$this->startDateParam]) && isset($selectCriteria[$this->endDateParam])) {
+            throw new \InvalidArgumentException("endDate exists without a startDate.");
         }
 
-        if (isset($selectCriteria['start_date']) && isset($selectCriteria['end_date'])) {
+        if (isset($selectCriteria[$this->startDateParam]) && isset($selectCriteria[$this->endDateParam])) {
             try {
-                $startDate = $this->getStartDate($selectCriteria['start_date']);
+                $startDate = $this->getStartDate($selectCriteria[$this->startDateParam]);
             } catch (\Exception $e) {
-                throw new \InvalidArgumentException("start_date failed to parse with data '{$selectCriteria['start_date']}', original message: {$e->getMessage()}");
+                throw new \InvalidArgumentException("startDate failed to parse with data '{$selectCriteria[$this->startDateParam]}', original message: {$e->getMessage()}");
             }
             try {
-                $endDate = $this->getEndDate($selectCriteria['end_date']);
+                $endDate = $this->getEndDate($selectCriteria[$this->endDateParam]);
             } catch (\Exception $e) {
-                throw new \InvalidArgumentException("end_date failed to parse with data '{$selectCriteria['end_date']}', original message: {$e->getMessage()}");
+                throw new \InvalidArgumentException("endDate failed to parse with data '{$selectCriteria[$this->endDateParam]}', original message: {$e->getMessage()}");
             }
         }
 
@@ -370,7 +380,7 @@ class FormExporter
             return true;
         } else {
             if ($diff->days > 0 && $diff->invert == 1) {                    // startDate > endDate, no resolution
-                throw new \InvalidArgumentException("Date order problem: start_date({$selectCriteria['start_date']}) > end_date({$selectCriteria['start_date']})");
+                throw new \InvalidArgumentException("Date order problem: startDate({$selectCriteria[$this->startDateParam]}) > endDate({$selectCriteria[$this->startDateParam]})");
             } else {
                 if ($diff->days == 0) {                                     // startDate = endDate, one day scenario
                     return true;

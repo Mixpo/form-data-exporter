@@ -328,18 +328,18 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'dsn',
             'tableName',
             'data',
-            ['start_date' => '2015-04-01', 'end_date' => '2015-04-30'],
+            ['startDate' => '2015-04-01', 'endDate' => '2015-04-30'],
             $this->logger
         );
         $exporter->setExporterEngine(
             new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('out.csv'), $this->logger)
         );
-        $expectedQuery = 'SELECT * FROM "tableName" WHERE "created" >= :start_date '
-            . 'AND "created" <= :end_date';
+        $expectedQuery = 'SELECT * FROM "tableName" WHERE "created" >= :startDate '
+            . 'AND "created" <= :endDate';
 
         $expectedBindings = [
-            'start_date' => '2015-04-01',
-            'end_date' => '2015-04-30'
+            'startDate' => '2015-04-01',
+            'endDate' => '2015-04-30'
         ];
         list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
         $this->assertEquals($expectedQuery, $actualQuery);
@@ -452,9 +452,9 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $dateData = '2015-01-01';
 
         try {
-            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['start_date' => $dateData]]);
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['startDate' => $dateData]]);
         } catch (\InvalidArgumentException $e) {
-            $this->assertContains('start_date exists without an end_date.', $e->getMessage());
+            $this->assertContains('startDate exists without an endDate.', $e->getMessage());
             return;
         }
         $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
@@ -478,10 +478,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $dataData = '2015-01-01';
 
         try {
-            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['end_date' => $dataData]]);
+            TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['endDate' => $dataData]]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
-            $this->assertContains('end_date exists without a start_date', $e->getMessage());
+            $this->assertContains('endDate exists without a startDate', $e->getMessage());
             return;
         }
         $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
@@ -505,10 +505,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         try {
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-                [['start_date' => $invalidStartDateData, 'end_date' => '2015-01-01']]);
+                [['startDate' => $invalidStartDateData, 'endDate' => '2015-01-01']]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
-            $this->assertContains('start_date', $e->getMessage());
+            $this->assertContains('startDate', $e->getMessage());
             $this->assertContains($invalidStartDateData, $e->getMessage());
             return;
         }
@@ -533,10 +533,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         try {
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-                [['start_date' => '2015-01-01', 'end_date' => $invalidEndDateData]]);
+                [['startDate' => '2015-01-01', 'endDate' => $invalidEndDateData]]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
-            $this->assertContains('end_date', $e->getMessage());
+            $this->assertContains('endDate', $e->getMessage());
             $this->assertContains($invalidEndDateData, $e->getMessage());
             return;
         }
@@ -558,7 +558,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         );
 
         $isValidated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-            [['start_date' => '2015-01-01', 'end_date' => '2015-02-01']]);
+            [['startDate' => '2015-01-01', 'endDate' => '2015-02-01']]);
         $this->assertTrue($isValidated, "Validator didn't validate valid dates.");
     }
 
@@ -578,7 +578,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         try {
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-                [['start_date' => '2015-02-01', 'end_date' => '2015-01-01']]);
+                [['startDate' => '2015-02-01', 'endDate' => '2015-01-01']]);
         } catch (\InvalidArgumentException $e) {
             $this->assertContains("Date order problem", $e->getMessage());
             return;
@@ -601,7 +601,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         );
 
         $validated = TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-            [['start_date' => '2015-02-01', 'end_date' => '2015-02-01']]);
+            [['startDate' => '2015-02-01', 'endDate' => '2015-02-01']]);
         $this->assertTrue($validated, "Start date == end date failed to validate");
     }
 
@@ -624,7 +624,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         try {
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
-                [['start_date' => $futureStartDate->format(\DateTime::ISO8601), 'end_date' => '2015-02-01']]);
+                [['startDate' => $futureStartDate->format(\DateTime::ISO8601), 'endDate' => '2015-02-01']]);
         } catch (\InvalidArgumentException $e) {
             $this->assertContains("Start date in the future", $e->getMessage());
             return;
@@ -689,15 +689,15 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         $startDate = '2015-01-01';
         $endDate = '2015-01-02';
-        $selectCriteria = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['start_date' => $startDate, 'end_date' => $endDate]]);
+        $selectCriteria = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['startDate' => $startDate, 'endDate' => $endDate]]);
 
         $whereItems = $selectCriteria[0];
         $keyValuePairs = $selectCriteria[1];
 
-        $this->assertEquals('"created" >= :start_date', $whereItems[0]);
-        $this->assertEquals('"created" <= :end_date', $whereItems[1]);
-        $this->assertEquals($startDate, $keyValuePairs['start_date']);
-        $this->assertEquals($endDate, $keyValuePairs['end_date']);
+        $this->assertEquals('"created" >= :startDate', $whereItems[0]);
+        $this->assertEquals('"created" <= :endDate', $whereItems[1]);
+        $this->assertEquals($startDate, $keyValuePairs['startDate']);
+        $this->assertEquals($endDate, $keyValuePairs['endDate']);
     }
 
     /**
@@ -711,7 +711,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'dsn',
             'tableName',
             'data',
-            ['start_date' => '2015-04-01', 'end_date' => '2015-04-30'],
+            ['startDate' => '2015-04-01', 'endDate' => '2015-04-30'],
             $this->logger
         );
         $exporter->setExporterEngine(
@@ -740,7 +740,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             'dsn',
             'tableName',
             'data',
-            ['start_date' => '2015-04-01', 'end_date' => '2015-04-01'],
+            ['startDate' => '2015-04-01', 'endDate' => '2015-04-01'],
             $this->logger
         );
         $exporter->setExporterEngine(
