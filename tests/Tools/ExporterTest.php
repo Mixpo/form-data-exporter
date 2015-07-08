@@ -457,7 +457,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->assertContains('start_date exists without an end_date.', $e->getMessage());
             return;
         }
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
 
     }
 
@@ -481,10 +481,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria', [['end_date' => $dataData]]);
         } catch (\InvalidArgumentException $e) {
             // We're throwing lots of IAE's, so let's sanity check we got the message we expected.
-            $this->assertContains('end_date exists without a start_date.', $e->getMessage());
+            $this->assertContains('end_date exists without a start_date', $e->getMessage());
             return;
         }
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
     }
 
     /**
@@ -512,7 +512,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->assertContains($invalidStartDateData, $e->getMessage());
             return;
         }
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
     }
 
     /**
@@ -540,7 +540,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->assertContains($invalidEndDateData, $e->getMessage());
             return;
         }
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
     }
 
     /**
@@ -583,7 +583,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->assertContains("Date order problem", $e->getMessage());
             return;
         }
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
     }
 
     /**
@@ -630,7 +630,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             return;
         }
 
-        $this->assertFalse(true, "Exception not thrown");
+        $this->assertFalse(true, "InvalidArgumentException not thrown as expected.");
     }
 
     /**
