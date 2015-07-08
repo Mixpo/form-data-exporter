@@ -609,7 +609,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
      * @group FL-1161
      * @group FL-1236
      */
-    function testValidateSelectCriteriaStartDateInTheFuture()
+    function testValidateSelectCriteriaStartDateNotInFuture()
     {
         $exporter = new FormExporter(
             'dsn',
