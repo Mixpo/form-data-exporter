@@ -291,15 +291,13 @@ class FormExporter
                     $whereClauseSegments[] = "\"$k\" IN (:" . implode(', :', array_keys($inBindings)) . ")";
                     $bindings += $inBindings;
                 } else {
+                    $bindings[$k] = $v;
                     //Potential hack here, adding date checks would make this un-reusable but have stronger typing.
                     if ($k == 'start_date') {
-                        $bindings["$k"] = $v;
                         $whereClauseSegments[] = "\"created\" >= :{$k}";
                     } elseif ($k == 'end_date') {
-                        $bindings["$k"] = $v;
                         $whereClauseSegments[] = "\"created\" <= :{$k}";
                     } else {
-                        $bindings["$k"] = $v;
                         $whereClauseSegments[] = "\"$k\" = :{$k}";
                     }
                 }
