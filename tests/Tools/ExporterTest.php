@@ -318,6 +318,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedBindings, $actualBindings);
     }
 
+    /**
+     * @group FL-1161
+     * @group FL-1236
+     */
     function testSelectQueryBuilderWithDateCriteriaSupplied()
     {
         $exporter = new FormExporter(
@@ -411,24 +415,6 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             new FileSystemExporterEngine('/not/a/real/path', $this->logger)
         );
         $exporter->run();
-    }
-
-    /**
-     * @todo: something
-     * @group FL-1161
-     * @group FL-1236
-     */
-    function testProcessSelectCriteria()
-    {
-        $exporter = new FormExporter(
-            'dsn',
-            'tableName',
-            'data',
-            [],
-            $this->logger
-        );
-
-        $thing = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria', [['start_date' => '2015-01-01', 'end_date' => '2015-02-01']]);
     }
 
     /**
