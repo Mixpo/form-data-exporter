@@ -70,8 +70,11 @@ $issues = $exporter->getIssues();
  *      [
  *       [
  *         "message" => "Expected data field of name: 'form_data', not found for this row",
- *         "row" => ["id" => 2, "identifier" => "client-xyz", "tag" => "widget-1-campaign", 
- *                   "version" => 1, "created" => "2015-04-16 21:50:39"]
+ *         "row" => ["id" => 2, 
+ *                   "identifier" => "client-xyz",
+ *                   "tag" => "widget-1-campaign",
+ *                   "version" => 1,
+ *                   "created" => "2015-04-16 21:50:39"]
  *       ],
  *       ...
  *      ]
