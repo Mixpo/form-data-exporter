@@ -115,6 +115,7 @@ class FormExporter
         }
         $this->exportEngine->verifyDestinationIsWritable();
 
+        $this->validateSelectCriteria($this->selectCriteria);
         list($query, $bindings) = $this->constructSelectQuery();
         $results = $this->executeQuery($query, $bindings);
 
@@ -315,7 +316,6 @@ class FormExporter
      * Provide validation for select criteria coming from the client; currently only supports startDate and endDate.
      * startDate & endDate are expected to be epoch (? or perhaps ISO-8601)
      *
-     * @todo: Break it down, funky
      * @param array $selectCriteria
      * @return bool
      * @throws \InvalidArgumentException
