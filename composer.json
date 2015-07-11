@@ -1,7 +1,6 @@
 {
   "name": "mixpo/form-data-exporter",
   "description": "Simple Export Db -> CSV library",
-  "version": "2.1.0",
   "license": "MIT",
   "minimum-stability": "dev",
   "require": {
