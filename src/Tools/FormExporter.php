@@ -297,12 +297,14 @@ class FormExporter
                     $whereClauseSegments[] = "\"$k\" IN (:" . implode(', :', array_keys($inBindings)) . ")";
                     $bindings += $inBindings;
                 } else {
-                    $bindings[$k] = $v;
                     if ($k == self::START_DATE_ATTRIBUTE) {
+                        $bindings[$k] = $this->getStartDate($v)->format(\DateTime::ISO8601);
                         $whereClauseSegments[] = "\"created\" >= :{$k}";
                     } elseif ($k == self::END_DATE_ATTRIBUTE) {
+                        $bindings[$k] = $this->getEndDate($v)->format(\DateTime::ISO8601);
                         $whereClauseSegments[] = "\"created\" <= :{$k}";
                     } else {
+                        $bindings[$k] = $v;
                         $whereClauseSegments[] = "\"$k\" = :{$k}";
                     }
                 }
@@ -318,6 +320,7 @@ class FormExporter
      *
      * @param array $selectCriteria
      * @return bool
+     *
      * @throws \InvalidArgumentException
      */
     protected function validateSelectCriteria($selectCriteria)
@@ -346,10 +349,17 @@ class FormExporter
     /**
      * @param string $startDate
      * @return \DateTime
+     *
+     * @throws \InvalidArgumentException
      */
     protected function getStartDate($startDate)
     {
-        return new \DateTime($startDate);
+        try {
+            $startDateTime = new \DateTime($startDate);
+        } catch (\Exception $e) {
+            throw new \InvalidArgumentException("startDate '{$startDate}' was unable to be processed.");
+        }
+        return $startDateTime;
     }
 
     /**
@@ -357,12 +367,18 @@ class FormExporter
      *
      * @param string $endDate
      * @return \DateTime
+     *
+     * @throws \InvalidArgumentException
      */
     protected function getEndDate($endDate)
     {
-        $endDateTime = new \DateTime($endDate);
-        // Make $endDate 23:59:59 of specified date for inclusive exports
-        $endDateTime->modify('tomorrow')->modify('1 second ago');
+        try {
+            $endDateTime = new \DateTime($endDate);
+            // Make $endDate 23:59:59 of specified date for inclusive exports
+            $endDateTime->modify('tomorrow')->modify('1 second ago');
+        } catch (\Exception $e) {
+            throw new \InvalidArgumentException("endDate '{$endDate}' was unable to be processed.");
+        }
 
         return $endDateTime;
     }

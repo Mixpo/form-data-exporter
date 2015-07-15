@@ -319,6 +319,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @group FL-1265
      * @group FL-1161
      * @group FL-1236
      */
@@ -338,8 +339,8 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             . 'AND "created" <= :endDate';
 
         $expectedBindings = [
-            'startDate' => '2015-04-01',
-            'endDate' => '2015-04-30'
+            'startDate' => '2015-04-01T00:00:00+0000',
+            'endDate' => '2015-04-30T23:59:59+0000'
         ];
         list($actualQuery, $actualBindings) = TestHelper::invokeNonPublicMethod($exporter, 'constructSelectQuery');
         $this->assertEquals($expectedQuery, $actualQuery);
@@ -493,6 +494,44 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1265
+     */
+    function testValidateSelectCriteriaMissingStartDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['endDate' => '2015-01-01']]);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1265
+     */
+    function testValidateSelectCriteriaMissingEndDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
+            [['startDate' => '2015-01-01']]);
+    }
+
+    /**
      * @group FL-1161
      * @group FL-1236
      */
@@ -595,6 +634,28 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             [$startDate, $endDate]);
         $this->assertEquals($expectedStartDate, $actualStartDate, "Start date did not match expected.");
         $this->assertEquals($expectedEndDate, $actualEndDate, "End date did not match expected.");
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1161
+     * @group FL-1265
+     */
+    function testCheckDateValidityCreatesDateTimeFailsDateTimeUtilCheck()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
+        $startDate = '0000-00-00';
+        $endDate = '0000-00-00';
+
+            TestHelper::invokeNonPublicMethod($exporter, 'checkDateValidity',
+            [$startDate, $endDate]);
     }
 
     /**
@@ -723,6 +784,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @group FL-1265
      * @group FL-1161
      * @group FL-1236
      */
@@ -738,6 +800,10 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         $startDate = '2015-01-01';
         $endDate = '2015-01-02';
+
+        $expectedStartDate = '2015-01-01T00:00:00+0000';
+        $expectedEndDate = '2015-01-02T23:59:59+0000';
+
         $selectCriteria = TestHelper::invokeNonPublicMethod($exporter, 'processSelectCriteria',
             [['startDate' => $startDate, 'endDate' => $endDate]]);
 
@@ -746,7 +812,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals('"created" >= :startDate', $whereItems[0]);
         $this->assertEquals('"created" <= :endDate', $whereItems[1]);
-        $this->assertEquals($startDate, $keyValuePairs['startDate']);
-        $this->assertEquals($endDate, $keyValuePairs['endDate']);
+        $this->assertEquals($expectedStartDate, $keyValuePairs['startDate']);
+        $this->assertEquals($expectedEndDate, $keyValuePairs['endDate']);
     }
 }
