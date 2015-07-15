@@ -715,8 +715,30 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
             $this->logger
         );
 
+        $startDate = new \DateTime('2015-04-05');
+        $endDate = new \DateTime('2015-03-31');
+
+        TestHelper::invokeNonPublicMethod($exporter, 'checkDateBounds', [$startDate, $endDate]);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @group FL-1268
+     * @group FL-1161
+     * @group FL-1236
+     */
+    function testCheckDateBoundsStartDateIsLessThanOneDayAfterEndDateThrowsException()
+    {
+        $exporter = new FormExporter(
+            'dsn',
+            'tableName',
+            'data',
+            [],
+            $this->logger
+        );
+
         $startDate = new \DateTime('2015-04-01');
-        $endDate = new \DateTime('2015-02-01');
+        $endDate = new \DateTime('2015-03-31 23:59:59');
 
         TestHelper::invokeNonPublicMethod($exporter, 'checkDateBounds', [$startDate, $endDate]);
     }

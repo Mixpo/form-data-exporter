@@ -424,7 +424,7 @@ class FormExporter
         // Create a diff of start and end dates for ensuring startDate comes before or is equal to endDate
         $diff = $startDate->diff($endDate);
 
-        if ($diff->days > 0 && $diff->invert == 1) {                    // startDate > endDate, no resolution
+        if ($diff->invert == 1) {                    // startDate > endDate, no resolution
             throw new \InvalidArgumentException("Date order problem: startDate({$startDate->format(\DateTime::ISO8601)}) > endDate({$startDate->format(\DateTime::ISO8601)})");
         }
 
