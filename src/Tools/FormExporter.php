@@ -399,7 +399,7 @@ class FormExporter
                 throw new \Exception();
             }
         } catch (\Exception $e) {
-            throw new \InvalidArgumentException("A date failed to parse: startDate = '{$startDateParam}', endDate = '{$startDateParam}'");
+            throw new \InvalidArgumentException("A date failed to parse: startDate = '{$startDateParam}', endDate = '{$endDateParam}'");
         }
         return [$startDate, $endDate];
     }
@@ -416,7 +416,7 @@ class FormExporter
 
         // Check if the start date is in the future.
         $todayDiff = $startDate->diff(new \DateTime());
-        if ($todayDiff->days > 0 && $todayDiff->invert == 1) {
+        if ($todayDiff->invert == 1) {
             $today = (new \DateTime())->format(\DateTime::ISO8601);
             throw new \InvalidArgumentException("Start date in the future ({$startDate->format(\DateTime::ISO8601)}), today is ({$today})");
         }
