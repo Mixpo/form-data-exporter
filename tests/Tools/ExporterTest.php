@@ -590,6 +590,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @expectedException \InvalidArgumentException
+     * @group FL-1266
      * @group FL-1161
      * @group FL-1236
      */
@@ -604,7 +605,7 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         );
 
         // Pick a date 7 days from now.
-        $futureStartDate = (new \DateTime())->modify('7 days');
+        $futureStartDate = (new \DateTime())->modify('1 day');
 
         TestHelper::invokeNonPublicMethod($exporter, 'validateSelectCriteria',
             [['startDate' => $futureStartDate->format(\DateTime::ISO8601), 'endDate' => '2015-02-01']]);
