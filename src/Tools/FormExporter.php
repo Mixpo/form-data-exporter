@@ -70,6 +70,11 @@ class FormExporter
     const END_DATE_ATTRIBUTE = 'endDate';
 
     /**
+     * @var string
+     */
+    protected $timeZoneOffset = "+0:00";
+
+    /**
      * @param string $dsnString
      * @param string $tableName
      * @param string $dataFieldName
@@ -206,6 +211,23 @@ class FormExporter
                 }
                 $this->extractColumnNames($resultRow);
                 $data = json_decode($resultRow[$this->dataFieldName], true);
+
+                // Created Date
+                $createdDate = null;
+                try {
+
+                    $createdDate = new \DateTime($resultRow['created']);
+
+                } catch (\Exception $e) {
+                    throw new \InvalidArgumentException("createdDate '{$resultRow['created']}' was unable to be processed.");
+                }
+
+                // Set the Timezone of the Created Date
+                $createdDate->setTimezone(new \DateTimeZone($this->timeZoneOffset));
+
+                // Format the Created Date
+                $data['created'] = $createdDate->format('Y-m-d h:i:s a');
+
                 ksort($data);
                 $extractedDataRows[] = $data;
             }
@@ -223,7 +245,12 @@ class FormExporter
      */
     protected function extractColumnNames($dataRow)
     {
+        // Parse the Form Data
         $data = json_decode($dataRow[$this->dataFieldName], true);
+
+        // Include the 'created' column manually
+        $data['created'] = $dataRow['created'];
+
         $fieldNames = array_fill_keys(array_keys($data), null);
         $merged = array_merge($this->canonicalColumnNamesList, $fieldNames);
         ksort($merged);
@@ -401,6 +428,10 @@ class FormExporter
         } catch (\Exception $e) {
             throw new \InvalidArgumentException("A date failed to parse: startDate = '{$startDateParam}', endDate = '{$endDateParam}'");
         }
+
+        // Store the Time Zone Offset for formatting the results later
+        $this->timeZoneOffset = $startDate->getTimezone()->getName();
+
         return [$startDate, $endDate];
     }
 

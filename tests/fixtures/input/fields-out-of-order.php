@@ -13,7 +13,7 @@ $testInput = [
         'identifier' => 'client-xyz',
         'tag' => 'widget-1-campaign',
         'version' => 1,
-        'created' => '2015-04-16 21:51:52',
+        'created' => '2015-04-16 21:50:39',
         'data' => '{"comment":"booyah!","lastName":"Terwilliger","firstName":"Bob","age":"42"}'
     ],
     [
