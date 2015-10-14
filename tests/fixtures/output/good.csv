@@ -1,4 +1,4 @@
-age,comment,firstName,lastName
-47,Amen,Ned,Flanders
-42,booyah!,Bob,Terwilliger
-130,Excellent,Monte,Burns
+age,comment,created,firstName,lastName
+47,Amen,"2015-04-16 09:51:52 pm",Ned,Flanders
+42,booyah!,"2015-04-16 09:50:39 pm",Bob,Terwilliger
+130,Excellent,"2015-04-16 06:43:15 pm",Monte,Burns

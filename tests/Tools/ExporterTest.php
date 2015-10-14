@@ -838,4 +838,53 @@ class ExporterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedStartDate, $keyValuePairs['startDate']);
         $this->assertEquals($expectedEndDate, $keyValuePairs['endDate']);
     }
+
+    /**
+     * @group FL-1532
+     */
+    function testCreatedDateFormattedInSupportedUSLocalTimes() {
+
+        $supportedTimeZoneOffsets = [
+          'EST' => '-05:00',
+          'EDT' => '-04:00',
+          'CST' => '-06:00',
+          'CDT' => '-05:00',
+          'MST' => '-07:00',
+          'MDT' => '-06:00',
+          'PST' => '-08:00',
+          'PDT' => '-07:00',
+        ];
+
+        $resultsFixture = TestHelper::getFixtureInput('happy-path.php');
+
+        foreach ($supportedTimeZoneOffsets as $abbr => $offset) {
+
+            $mockExporter = $this->getMockBuilder('\Mixpo\Igniter\Tools\FormExporter')
+                ->setConstructorArgs(
+                    [
+                        'dsn',
+                        'tableName',
+                        'data',
+                        ['startDate' => '2015-04-15 00:00:00' . $offset, 'endDate' => '2015-04-22 00:00:00' . $offset],
+                        $this->logger
+                    ]
+                )
+                ->setMethods(['executeQuery'])->getMock();
+            $mockExporter->expects($this->once())->method('executeQuery')->willReturn($resultsFixture);
+
+            /** @var FormExporter $mockExporter */
+            $mockExporter->setDbConnectionAdapter(new MockConnectionAdapter());
+            $mockExporter->setExporterEngine(
+                new FileSystemExporterEngine(TestHelper::getFileSystemTmpPath('happy-path.csv'), $this->logger)
+            );
+
+            $csvFilePath = $mockExporter->run();
+
+            $expected = TestHelper::getFixtureOutput("good-{$abbr}.csv");
+            $actual = TestHelper::getTmpFile(pathinfo($csvFilePath, PATHINFO_BASENAME));
+
+            $this->assertEquals($expected, $actual);
+        }
+
+    }
 }
